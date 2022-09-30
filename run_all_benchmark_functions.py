@@ -31,10 +31,10 @@ counter = 0
 myfunction_list=[]
 
 #myfunction_list.append(functions.sincos())
-#myfunction_list.append(functions.branin())
+myfunction_list.append(functions.branin())
 #myfunction_list.append(functions.hartman_3d())
 #myfunction_list.append(functions.ackley(input_dim=5))
-myfunction_list.append(functions.alpine1(input_dim=5))
+#myfunction_list.append(functions.alpine1(input_dim=5))
 #myfunction_list.append(functions.hartman_6d())
 #myfunction_list.append(functions.gSobol(a=np.array([1,1,1,1,1])))
 #myfunction_list.append(functions.gSobol(a=np.array([1,1,1,1,1,1,1,1,1,1])))
@@ -78,14 +78,14 @@ temp['IsTGP']=0 # we can try 'tgp' by setting it =1
 temp={}
 temp['name']='ei' # vanilla EI
 temp['IsTGP']=0 # we can try 'tgp' by setting it =1
-#acq_type_list.append(temp)
+acq_type_list.append(temp)
 
 
 
 temp={}
-temp['name']='random' # vanilla EI
+temp['name']='random' # random
 temp['IsTGP']=0 # we can try 'tgp' by setting it =1
-#acq_type_list.append(temp)
+acq_type_list.append(temp)
 
 fig=plt.figure()
 
@@ -119,8 +119,12 @@ for idx, (myfunction,acq_type,) in enumerate(itertools.product(myfunction_list,a
         else:
             bo[ii]=BayesOpt(myfunction.func,myfunction.bounds,acq_name,verbose=1)
   
-        ybest[ii],MyTime[ii]=utilities.run_experiment(bo[ii],n_init=3*myfunction.input_dim,\
-             NN=10*myfunction.input_dim,runid=ii)        
+        if acq_name =='random': # we generate random points without running BO
+            ybest[ii],MyTime[ii]=utilities.run_experiment(bo[ii],
+                 n_init=13*myfunction.input_dim,NN=0,runid=ii)   
+        else:
+            ybest[ii],MyTime[ii]=utilities.run_experiment(bo[ii],n_init=3*myfunction.input_dim,\
+             NN=10*myfunction.input_dim,runid=ii)   
                                        
         MyOptTime[ii]=bo[ii].time_opt
         print("ii={} BFV={:.3f}".format(ii,myfunction.ismax*np.max(ybest[ii])))                                              
@@ -135,7 +139,6 @@ for idx, (myfunction,acq_type,) in enumerate(itertools.product(myfunction_list,a
     
     
     ## plot the result
-        
     # process the result
     
     y_best_sofar=[0]*len(bo)

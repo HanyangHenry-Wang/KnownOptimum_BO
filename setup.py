@@ -3,10 +3,11 @@ from setuptools import setup, find_packages
 setup(
     name='bayes_opt',
     version='1',
-    packages = ["bayes_opt",
-    "bayes_opt.test_functions",
-	"bayes_opt.utility",
-	"bayes_opt.visualization"],
+    packages=find_packages(),
+#     packages = ["bayes_opt",
+#     "bayes_opt.test_functions",
+# 	"bayes_opt.utility",
+# 	"bayes_opt.visualization"],
     include_package_data = True,
     description='Bayesian Optimization Known Optimum Value',
     install_requires=[
