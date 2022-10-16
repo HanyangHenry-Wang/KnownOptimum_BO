@@ -190,7 +190,9 @@ class BayesOpt_KnownOptimumValue(object):
         np.random.seed(seed)
         # Generate random points
         init_X = np.random.uniform(self.SearchSpace[:, 0], self.SearchSpace[:, 1],size=(n_init_points, self.dim))
-   
+
+        #print('my init is:', init_X) #############
+         
         self.X_ori = np.asarray(init_X)
         
         # Evaluate target function at all initialization           
@@ -212,16 +214,13 @@ class BayesOpt_KnownOptimumValue(object):
         fstar_scaled=(self.fstar-np.mean(self.Y_ori))/np.std(self.Y_ori)
             
         # init a new Gaussian Process
-        if self.IsTGP==1:
-            self.gp=TransformedGP(self.scaleSearchSpace,verbose=self.verbose,IsZeroMean=self.IsZeroMean)
-            # Find unique rows of X to avoid GP from breaking
-            ur = unique_rows(self.X)
-            self.gp.fit(self.X[ur], self.Y[ur],fstar_scaled)
-        else:
-            self.gp=GaussianProcess(self.scaleSearchSpace,verbose=self.verbose)
-            ur = unique_rows(self.X)
-            self.gp.fit(self.X[ur], self.Y[ur])
-            self.gp.set_optimum_value(fstar_scaled)
+        
+        self.IsTGP=0
+        self.gp=TransformedGP(self.scaleSearchSpace,verbose=self.verbose,IsZeroMean=self.IsZeroMean)
+        # Find unique rows of X to avoid GP from breaking
+        ur = unique_rows(self.X)
+        self.gp.fit(self.X[ur], self.Y[ur],fstar_scaled)
+       
             
         # optimize GP parameters after 3*dim iterations
         if  len(self.Y)%(3*self.dim)==0:
@@ -229,15 +228,96 @@ class BayesOpt_KnownOptimumValue(object):
             
         # check if the surrogate hit the optimum value f*, check if UCB and LCB cover the fstar
         x_ucb,y_ucb=acq_max_with_name(gp=self.gp,SearchSpace=self.scaleSearchSpace,acq_name="ucb",IsReturnY=True,fstar_scaled=fstar_scaled)
-        x_lcb,y_lcb=acq_max_with_name(gp=self.gp,SearchSpace=self.scaleSearchSpace,acq_name="lcb",IsReturnY=True,IsMax=False)
+        #x_lcb,y_lcb=acq_max_with_name(gp=self.gp,SearchSpace=self.scaleSearchSpace,acq_name="lcb",IsReturnY=True,IsMax=False)
         
         if y_ucb<fstar_scaled: # f* > ucb we initially use EI with the vanilla GP until the fstar is covered by the upper bound
+            self.IsTGP=0
             x_max=acq_max_with_name(gp=self.gp,SearchSpace=self.scaleSearchSpace,acq_name="ei")
             self.marker.append(0)
             if self.verbose==1:
-                print("y_lcb={} y_ucb={} fstar_scaled={:.4f}".format(y_lcb,y_ucb,fstar_scaled))
+                #print("y_lcb={} y_ucb={} fstar_scaled={:.4f}".format(y_lcb,y_ucb,fstar_scaled))
+                print("EI")
+                
+        else: # perform TransformGP and ERM/CBM
+            self.IsTGP=1
+            self.marker.append(1)
+            self.IsTGP=1
+            x_max=acq_max_with_name(gp=self.gp,SearchSpace=self.scaleSearchSpace,acq_name=self.acq_name, \
+                                    fstar_scaled=fstar_scaled)
+        if np.any(np.abs((self.X - x_max)).sum(axis=1) <= (self.dim*1e-5)):
+            
+            if self.verbose==1:
+                print("{} x_max is repeated".format(self.acq_name))
+                
+            # lift up the surrogate function
+            self.gp.IsZeroMean=True
+            self.IsZeroMean=True
+            self.gp=TransformedGP(self.scaleSearchSpace,verbose=self.verbose,IsZeroMean=self.IsZeroMean)
+            ur = unique_rows(self.X)
+            self.gp.fit(self.X[ur], self.Y[ur],fstar_scaled)
+            
+            x_max=acq_max_with_name(gp=self.gp,SearchSpace=self.scaleSearchSpace,acq_name=self.acq_name,fstar_scaled=fstar_scaled)
+            
+   
+        # store X                                     
+        self.X = np.vstack((self.X, x_max.reshape((1, -1))))
+
+        # compute X in original scale
+        x_max_ori=self.Xscaler.inverse_transform(np.reshape(x_max,(-1,self.dim)))
+
+        self.X_ori=np.vstack((self.X_ori, x_max_ori))
+        # evaluate Y using original X
+        
+        #self.Y = np.append(self.Y, self.f(temp_X_new_original))
+        Y_ori=self.f(x_max_ori)
+        self.Y_ori = np.append(self.Y_ori, Y_ori)
+        
+        # update Y after change Y_ori
+        self.Y=(self.Y_ori-np.mean(self.Y_ori))/np.std(self.Y_ori)
+        
+        return x_max   
+    
+    
+    
+    
+    
+    def select_next_point_2(self,current,total):
+        """
+        select the next point to evaluate
+        -------
+        x: recommented point for evaluation
+        """
+
+        fstar_scaled=(self.fstar-np.mean(self.Y_ori))/np.std(self.Y_ori)
+        
+        if current<=0.3*total:
+            self.IsTGP=0
+            self.gp=GaussianProcess(self.scaleSearchSpace,verbose=self.verbose)
+            ur = unique_rows(self.X)
+            self.gp.fit(self.X[ur], self.Y[ur])
+            self.gp.set_optimum_value(fstar_scaled)
+        else:
+            self.IsTGP=1
+            self.gp=TransformedGP(self.scaleSearchSpace,verbose=self.verbose,IsZeroMean=self.IsZeroMean)
+            # Find unique rows of X to avoid GP from breaking
+            ur = unique_rows(self.X)
+            self.gp.fit(self.X[ur], self.Y[ur],fstar_scaled)
+            
+            
+        # optimize GP parameters after 3*dim iterations
+        if  len(self.Y)%(3*self.dim)==0:
+            self.gp.optimise()
+            
+        
+        if current<=0.3*total: # f* > ucb we initially use EI with the vanilla GP until the fstar is covered by the upper bound
+            self.IsTGP=0
+            x_max=acq_max_with_name(gp=self.gp,SearchSpace=self.scaleSearchSpace,acq_name="ei")
+            self.marker.append(0)
+            if self.verbose==1:
+                #print("y_lcb={} y_ucb={} fstar_scaled={:.4f}".format(y_lcb,y_ucb,fstar_scaled))
                 print("EI")
         else: # perform TransformGP and ERM/CBM
+            self.IsTGP=1
             self.marker.append(1)
             self.IsTGP=1
             x_max=acq_max_with_name(gp=self.gp,SearchSpace=self.scaleSearchSpace,acq_name=self.acq_name, \
@@ -275,4 +355,5 @@ class BayesOpt_KnownOptimumValue(object):
         self.Y=(self.Y_ori-np.mean(self.Y_ori))/np.std(self.Y_ori)
         
         return x_max   
+        
         

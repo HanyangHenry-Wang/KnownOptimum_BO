@@ -48,10 +48,10 @@ temp['name']='erm' # expected regret minimization
 temp['IsTGP']=0 # recommended to use tgp for ERM
 acq_type_list.append(temp)
 
-temp={}
-temp['name']='cbm' # confidence bound minimization
-temp['IsTGP']=1 # recommended to use tgp for CBM
-#acq_type_list.append(temp)
+# temp={}
+# temp['name']='cbm' # confidence bound minimization
+# temp['IsTGP']=1 # recommended to use tgp for CBM
+# #acq_type_list.append(temp)
 
 
 #temp={}
@@ -61,17 +61,17 @@ temp['IsTGP']=1 # recommended to use tgp for CBM
 
 
 
-temp={}
-temp['name']='kov_ei' # this is EI + f*
-temp['IsTGP']=0 # we can try 'tgp' by setting it =1
-#acq_type_list.append(temp)
+# temp={}
+# temp['name']='kov_ei' # this is EI + f*
+# temp['IsTGP']=0 # we can try 'tgp' by setting it =1
+# #acq_type_list.append(temp)
 
 
 
-temp={}
-temp['name']='ucb' # vanilla UCB
-temp['IsTGP']=0 # we can try 'tgp' by setting it =1
-#acq_type_list.append(temp)
+# temp={}
+# temp['name']='ucb' # vanilla UCB
+# temp['IsTGP']=0 # we can try 'tgp' by setting it =1
+# #acq_type_list.append(temp)
 
 
 
@@ -82,10 +82,10 @@ acq_type_list.append(temp)
 
 
 
-temp={}
-temp['name']='random' # random
-temp['IsTGP']=0 # we can try 'tgp' by setting it =1
-acq_type_list.append(temp)
+# temp={}
+# temp['name']='random' # random
+# temp['IsTGP']=0 # we can try 'tgp' by setting it =1
+# acq_type_list.append(temp)
 
 fig=plt.figure()
 
@@ -160,3 +160,4 @@ plt.xlabel("Iterations",fontsize=14)
 plt.legend(prop={'size': 14})
 strTitle="{:s} D={:d}".format(myfunction.name,myfunction.input_dim)
 plt.title(strTitle,fontsize=18)
+plt.show()

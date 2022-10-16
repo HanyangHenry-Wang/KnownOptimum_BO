@@ -127,6 +127,8 @@ class BayesOpt:
         
         init_X = np.random.uniform(self.SearchSpace[:, 0], self.SearchSpace[:, 1],size=(n_init_points, self.dim))
         
+        #print('my init is:', init_X) #############
+        
         self.X_ori = np.asarray(init_X)
         
         # Evaluate target function at all initialization           

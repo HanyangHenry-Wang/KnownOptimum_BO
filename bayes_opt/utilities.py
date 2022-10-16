@@ -149,6 +149,21 @@ def run_experiment(bo,yoptimal=0,n_init=3,NN=10,runid=1):
 
     return fxoptimal, elapsed_time
 
+def run_experiment_2 (bo,yoptimal=0,n_init=3,NN=10,runid=1):
+    # create an empty object for BO
+    
+    start_time = time.time()
+    bo.init(n_init_points=n_init,seed=runid)
+    
+    # number of recommended parameters
+    for idx in range(0,NN):
+        bo.select_next_point_2(idx,NN)
+
+    fxoptimal=bo.Y_ori
+    elapsed_time = time.time() - start_time
+
+    return fxoptimal, elapsed_time
+
     
 def yBest_Iteration(YY,BatchSzArray,step=3):
     
