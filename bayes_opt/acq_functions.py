@@ -198,9 +198,10 @@ class AcquisitionFunction(object):
         covG = np.diag(varG)
         sampleG = np.random.multivariate_normal(meanG, covG)
         samplef = fstar-0.5*sampleG**2
-    
+
+        sum = np.zeros(samplef.shape)
         
-        sum = np.zeros(20)
+        
         for i in range(20):
             sampleG = np.random.multivariate_normal(meanG, covG)
             samplef = fstar-0.5*sampleG**2

@@ -214,13 +214,16 @@ class BayesOpt_KnownOptimumValue(object):
         fstar_scaled=(self.fstar-np.mean(self.Y_ori))/np.std(self.Y_ori)
             
         # init a new Gaussian Process
-        
-        self.IsTGP=0
-        self.gp=TransformedGP(self.scaleSearchSpace,verbose=self.verbose,IsZeroMean=self.IsZeroMean)
-        # Find unique rows of X to avoid GP from breaking
-        ur = unique_rows(self.X)
-        self.gp.fit(self.X[ur], self.Y[ur],fstar_scaled)
-       
+        if self.IsTGP==1:
+            self.gp=TransformedGP(self.scaleSearchSpace,verbose=self.verbose,IsZeroMean=self.IsZeroMean)
+            # Find unique rows of X to avoid GP from breaking
+            ur = unique_rows(self.X)
+            self.gp.fit(self.X[ur], self.Y[ur],fstar_scaled)
+        else:
+            self.gp=GaussianProcess(self.scaleSearchSpace,verbose=self.verbose)
+            ur = unique_rows(self.X)
+            self.gp.fit(self.X[ur], self.Y[ur])
+            self.gp.set_optimum_value(fstar_scaled)
             
         # optimize GP parameters after 3*dim iterations
         if  len(self.Y)%(3*self.dim)==0:
@@ -228,22 +231,20 @@ class BayesOpt_KnownOptimumValue(object):
             
         # check if the surrogate hit the optimum value f*, check if UCB and LCB cover the fstar
         x_ucb,y_ucb=acq_max_with_name(gp=self.gp,SearchSpace=self.scaleSearchSpace,acq_name="ucb",IsReturnY=True,fstar_scaled=fstar_scaled)
-        #x_lcb,y_lcb=acq_max_with_name(gp=self.gp,SearchSpace=self.scaleSearchSpace,acq_name="lcb",IsReturnY=True,IsMax=False)
+        x_lcb,y_lcb=acq_max_with_name(gp=self.gp,SearchSpace=self.scaleSearchSpace,acq_name="lcb",IsReturnY=True,IsMax=False)
         
         if y_ucb<fstar_scaled: # f* > ucb we initially use EI with the vanilla GP until the fstar is covered by the upper bound
-            self.IsTGP=0
             x_max=acq_max_with_name(gp=self.gp,SearchSpace=self.scaleSearchSpace,acq_name="ei")
             self.marker.append(0)
             if self.verbose==1:
-                #print("y_lcb={} y_ucb={} fstar_scaled={:.4f}".format(y_lcb,y_ucb,fstar_scaled))
+                print("y_lcb={} y_ucb={} fstar_scaled={:.4f}".format(y_lcb,y_ucb,fstar_scaled))
                 print("EI")
-                
         else: # perform TransformGP and ERM/CBM
-            self.IsTGP=1
             self.marker.append(1)
             self.IsTGP=1
             x_max=acq_max_with_name(gp=self.gp,SearchSpace=self.scaleSearchSpace,acq_name=self.acq_name, \
                                     fstar_scaled=fstar_scaled)
+
         if np.any(np.abs((self.X - x_max)).sum(axis=1) <= (self.dim*1e-5)):
             
             if self.verbose==1:
@@ -309,7 +310,7 @@ class BayesOpt_KnownOptimumValue(object):
             self.gp.optimise()
             
         
-        if current<=0.3*total: # f* > ucb we initially use EI with the vanilla GP until the fstar is covered by the upper bound
+        if current<=0.3*total: #0.3*total: # f* > ucb we initially use EI with the vanilla GP until the fstar is covered by the upper bound
             self.IsTGP=0
             x_max=acq_max_with_name(gp=self.gp,SearchSpace=self.scaleSearchSpace,acq_name="ei")
             self.marker.append(0)
